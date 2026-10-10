@@ -1,0 +1,196 @@
+<!doctype html>
+<html lang="cs">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<meta name="theme-color" content="#f6f8fb">
+<title>Odbavení řidiče – interaktivní demo</title>
+<style>
+:root{--ink:#142239;--blue:#1658de;--blue-dark:#1043ac;--muted:#63738a;--line:#dae2ed;--bg:#f6f8fb;--green:#148053}
+*{box-sizing:border-box}
+html,body{width:100%;min-height:100%;margin:0}
+body{font-family:Inter,"Segoe UI",Arial,sans-serif;background:var(--bg);color:var(--ink);-webkit-font-smoothing:antialiased}
+button{font:inherit;cursor:pointer;touch-action:manipulation}
+button:focus-visible{outline:4px solid #79a9ff;outline-offset:4px}
+main{min-height:100svh;display:grid;place-items:center;padding:clamp(18px,3.4vw,55px)}
+.page{display:none;width:100%;max-width:1140px;animation:fade .18s ease-out}
+.page.active{display:flex;flex-direction:column;align-items:center;justify-content:center}
+@keyframes fade{from{opacity:0;transform:translateY(7px)}to{opacity:1;transform:translateY(0)}}
+h1{font-size:clamp(36px,4.25vw,67px);line-height:1.1;letter-spacing:-.045em;font-weight:800;text-align:center;margin:0 0 32px}
+.lang-grid{display:grid;grid-template-columns:repeat(5,minmax(0,1fr));gap:14px;width:100%}
+.lang{min-height:111px;border:2px solid var(--line);border-radius:17px;background:white;color:var(--ink);display:flex;align-items:center;justify-content:center;flex-direction:column;gap:12px;transition:background .13s,border-color .13s}
+.lang:hover,.lang:focus-visible{background:#edf4ff;border-color:var(--blue)}
+.flag{display:block;width:61px;height:41px;box-shadow:0 1px 5px #0002;border-radius:4px;overflow:hidden;line-height:0}
+.flag svg{width:100%;height:100%;display:block}
+.lang span:last-child{font-weight:700;font-size:clamp(13px,1.2vw,17px)}
+#preparePage,#scanPage,#resultPage{min-height:calc(100svh - 110px)}
+#preparePage h1{margin-bottom:42px}
+.large-btn{border:0;border-radius:17px;background:var(--blue);color:#fff;font-size:clamp(18px,2.1vw,29px);font-weight:750;min-height:85px;padding:23px 45px;max-width:100%;box-shadow:0 12px 23px #1658de26;transition:background .15s}
+.large-btn:hover:not(:disabled){background:var(--blue-dark)}
+.large-btn:disabled{opacity:.5;cursor:default}
+.scanner{position:relative;width:min(100%,980px);height:clamp(310px,49svh,560px);border-radius:21px;overflow:hidden;background:linear-gradient(130deg,#717f87 0%,#9b9f9d 42%,#838988 100%);box-shadow:0 17px 45px #162d4833;margin-bottom:26px;isolation:isolate}
+.scanner:before{content:"";position:absolute;inset:0;background:repeating-linear-gradient(1deg,transparent 0 28px,#26323812 28px 30px),repeating-linear-gradient(92deg,transparent 0 67px,#ffffff0e 67px 69px),radial-gradient(ellipse at 25% 23%,#ffffff50,transparent 65%);opacity:.85}
+.scanner:after{content:"";position:absolute;top:0;bottom:0;left:9%;width:9px;background:#e5d784cc;box-shadow:1px 0 2px #4b4d4f55;transform:rotate(-5deg)}
+.paper{position:absolute;left:50%;top:49%;width:min(43%,335px);min-width:220px;aspect-ratio:.81;transform:translate(-50%,-50%) rotate(-5deg);border-radius:5px;background:#f5f5f1;box-shadow:0 9px 34px #0006;padding:clamp(15px,2vw,26px);color:#2a3340;z-index:1}
+.paper-head{display:flex;justify-content:space-between;align-items:center;padding-bottom:10px;border-bottom:2px solid #c3cbd0;font-weight:800;font-size:clamp(15px,1.6vw,23px)}
+.paper-head small{font-size:10px;font-weight:600}
+.paper-line{height:8px;margin-top:15px;background:#bdc6cc;border-radius:2px;opacity:.9}
+.paper-line.short{width:62%}.paper-line.mid{width:83%}
+.paper-row{display:flex;justify-content:space-between;border-bottom:1px solid #bfc8cf;padding:13px 0 7px;font-size:clamp(9px,1vw,12px)}
+.paper-row strong{font-weight:800}
+.paper-bars{margin-top:20px;height:34px;width:75%;background:repeating-linear-gradient(90deg,#1c2c36 0 3px,transparent 3px 6px,#1c2c36 6px 7px,transparent 7px 13px,#1c2c36 13px 18px,transparent 18px 22px)}
+.scan-frame{position:absolute;inset:8% 25%;border:3px solid #ffffffcc;border-radius:12px;z-index:2;box-shadow:0 0 0 800px #081b302a;pointer-events:none}
+.scan-frame:before,.scan-frame:after{content:"";position:absolute;background:#33ffbb;box-shadow:0 0 12px #33ffbb88}
+.scan-frame:before{height:5px;left:-3px;right:-3px;top:0}
+.scan-frame:after{height:5px;left:-3px;right:-3px;bottom:0}
+.scan-beam{position:absolute;top:11%;left:26%;width:48%;height:4px;background:#45f9bd;box-shadow:0 0 20px 7px #43f6bf55;z-index:3;opacity:0;pointer-events:none}
+.scanner.working .scan-beam{opacity:1;animation:sweep 1.4s ease-in-out infinite alternate}
+@keyframes sweep{from{top:10%}to{top:88%}}
+#scanPage h1{margin-bottom:24px}
+.scan-actions{width:100%;display:flex;justify-content:center;align-items:center;gap:16px}
+#scanStatus{min-height:24px;color:var(--muted);font-size:18px;text-align:center;margin:16px 0 0}
+#resultPage{gap:0}
+.success{width:86px;height:86px;border-radius:50%;background:#e1f5ea;color:var(--green);display:grid;place-items:center;font-size:48px;font-weight:bold;margin-bottom:21px}
+#resultPage h1{font-size:clamp(31px,3.8vw,56px);margin:0 0 27px}
+.bay{color:var(--blue);font-size:clamp(110px,19vw,255px);font-weight:850;letter-spacing:-.09em;line-height:.95;text-align:center;position:relative;padding-right:.1em}
+.bay-label{text-align:center;font-size:clamp(23px,3.5vw,43px);font-weight:750;margin-bottom:1px}
+.details{display:flex;justify-content:center;flex-wrap:wrap;gap:30px 60px;margin:32px 0 40px;font-size:clamp(14px,1.6vw,19px)}
+.details div{text-align:center}.details small{display:block;font-size:.75em;color:var(--muted);margin-bottom:6px}.details strong{font-weight:750}
+.restart{background:transparent;border:2px solid var(--line);border-radius:14px;padding:15px 24px;font-weight:700;color:var(--ink);font-size:17px}
+.restart:hover{border-color:var(--blue);color:var(--blue)}
+@media(max-width:700px){main{padding:22px 16px}.lang-grid{grid-template-columns:repeat(3,1fr);gap:9px}.lang{min-height:90px;border-radius:12px;gap:9px}.flag{width:44px;height:31px}.lang span:last-child{font-size:12px}#languagePage h1{font-size:clamp(32px,7vw,50px);margin:0 0 23px}#preparePage,#scanPage,#resultPage{min-height:calc(100svh - 44px)}#preparePage h1{font-size:clamp(35px,8.5vw,62px);margin-bottom:35px}.large-btn{min-height:76px;width:100%;padding:18px 20px}#scanPage h1{font-size:clamp(32px,7vw,46px)}.scanner{height:clamp(310px,47svh,520px);border-radius:13px}.scan-frame{inset:12% 14%}.scan-beam{left:15%;width:70%}.scanner:after{left:4%}.paper{width:63%;min-width:195px;padding:15px}.paper-row{padding:9px 0 6px}.paper-line{margin-top:10px}.paper-bars{margin-top:12px}.details{gap:18px 27px;margin:26px 0 34px}.success{width:68px;height:68px;font-size:37px;margin-bottom:18px}}
+@media(max-width:360px){.lang-grid{grid-template-columns:repeat(2,1fr)}.lang{min-height:78px}.scanner{height:310px}.paper{min-width:180px}}
+@media(prefers-reduced-motion:reduce){.page{animation:none}.scanner.working .scan-beam{animation:none;top:48%}}
+</style>
+</head>
+<body>
+<main>
+<section class="page active" id="languagePage" aria-label="Výběr jazyka">
+<h1 id="languageTitle">Vyberte jazyk</h1>
+<div class="lang-grid" id="languageGrid"></div>
+</section>
+<section class="page" id="preparePage">
+<h1 id="prepareTitle">Připravte si dokumenty.</h1>
+<button class="large-btn" type="button" id="readyButton">Mám dokumenty připravené</button>
+</section>
+<section class="page" id="scanPage">
+<h1 id="scanTitle">Naskenujte dokument.</h1>
+<div class="scanner" id="scanner" role="img" aria-label="Simulovaný náhled kamery s přepravním dokladem">
+  <div class="paper" aria-hidden="true">
+    <div class="paper-head">CMR <small>DELIVERY NOTE</small></div>
+    <div class="paper-row"><span>Document no.</span><strong>DN-2026-10482</strong></div>
+    <div class="paper-row"><span>Truck</span><strong>4AZ 2196</strong></div>
+    <div class="paper-row"><span>Carrier</span><strong>ACME Transport</strong></div>
+    <div class="paper-row"><span>Load</span><strong>24 PALLETS</strong></div>
+    <div class="paper-line mid"></div><div class="paper-line short"></div><div class="paper-bars"></div>
+  </div>
+  <div class="scan-frame"></div><div class="scan-beam"></div>
+</div>
+<button class="large-btn" id="scanButton" type="button">Spustit skenování</button>
+<div id="scanStatus" aria-live="polite"></div>
+</section>
+<section class="page" id="resultPage">
+<div class="success" aria-hidden="true">✓</div>
+<h1 id="resultTitle">Pokračujte na rampu.</h1>
+<div class="bay-label" id="dockLabel">VAŠE RAMPA</div>
+<div class="bay">12</div>
+<div class="details"><div><small id="plateLabel">Registrační značka</small><strong>4AZ 2196</strong></div><div><small id="documentLabel">Číslo dokumentu</small><strong>DN-2026-10482</strong></div></div>
+<button class="restart" type="button" id="restartButton">Nový řidič</button>
+</section>
+</main>
+<script>
+(()=>{
+'use strict';
+  const languages=[
+    ['cs','CZ','Čeština'],['en','GB','English'],['de','DE','Deutsch'],['pl','PL','Polski'],
+    ['sk','SK','Slovenčina'],['uk','UA','Українська'],['ro','RO','Română'],['hu','HU','Magyar'],
+    ['bg','BG','Български'],['hr','HR','Hrvatski'],['sl','SI','Slovenščina'],['sr','RS','Српски'],
+    ['it','IT','Italiano'],['es','ES','Español'],['fr','FR','Français'],['nl','NL','Nederlands'],
+    ['lt','LT','Lietuvių'],['lv','LV','Latviešu'],['et','EE','Eesti'],['tr','TR','Türkçe']
+  ];
+  // Translation order: select title, introduction, prepare title, prepare intro, feature 1–3, ready button,
+  // scan title, scan intro, scan button, idle status, progress stages 1–4, result status,
+  // result title, result intro, ramp label, ramp instruction, plate, carrier, document, gate,
+  // gate value, restart, back, disclaimer, sidebar headline, sidebar copy.
+  const localeStrings={
+    cs:['Vyberte jazyk','Klepněte na vlajku a pokračujte v jazyce, kterému rozumíte.','Připravte si dokumenty.','Připravte si CMR nebo dodací list. Systém automaticky vyčte potřebné údaje a najde správnou rampu.','CMR / dodací list','Bez návštěvy kanceláře','Rychlé odbavení','Mám dokumenty připravené','Naskenujte dokument.','Vložte dokument do vyznačené oblasti. Pro tuto ukázku spustíte simulované skenování.','Spustit skenování','Připraveno ke skenování','Rozpoznávání dokumentu','Čtení dokumentu (OCR)','Vyhledávání zásilky','Přidělování rampy','ODBAVENÍ DOKONČENO','Pokračujte na rampu.','Dokument byl přečten a rampa byla automaticky přidělena.','VAŠE RAMPA','Jeďte přímo na rampu číslo 12.','Registrační značka','Dopravce','Číslo dokumentu','Vjezdová závora','Povoleno (demo)','Nový řidič','Zpět','Toto je simulace. Žádná skutečná závora se neotevírá.','Méně čekání.|Více pohybu.','Odbavení řidiče přímo na vjezdu. Dokumenty, kontrola a správná rampa během jediné návštěvy terminálu.'],
+    en:['Choose your language','Tap a flag to continue in a language you understand.','Prepare your documents.','Have your CMR or delivery note ready. The system reads the information and finds the correct loading bay.','CMR / delivery note','No office visit needed','Fast check-in','My documents are ready','Scan your document.','Place the document inside the marked area. Start a simulated scan for this demonstration.','Start scanning','Ready to scan','Detecting document','Reading document (OCR)','Finding your shipment','Assigning loading bay','CHECK-IN COMPLETE','Proceed to your bay.','Your document has been read and your bay has been assigned automatically.','YOUR BAY','Drive directly to bay number 12.','Registration plate','Carrier','Document number','Entry barrier','Approved (demo)','New driver','Back','This is a simulation. No real barrier is opened.','Less waiting.|More moving.','Check in at the entrance. Documents, checks and the correct bay at a single terminal.'],
+    de:['Sprache wählen','Tippen Sie auf eine Flagge und fahren Sie in Ihrer Sprache fort.','Dokumente bereithalten.','Halten Sie CMR oder Lieferschein bereit. Das System liest die Daten und findet die richtige Rampe.','CMR / Lieferschein','Kein Bürobesuch','Schnelle Anmeldung','Dokumente sind bereit','Dokument scannen.','Legen Sie das Dokument in den markierten Bereich. Starten Sie den simulierten Scan.','Scan starten','Bereit zum Scannen','Dokument erkennen','Dokument lesen (OCR)','Sendung suchen','Rampe zuweisen','ANMELDUNG ABGESCHLOSSEN','Fahren Sie zur Rampe.','Das Dokument wurde gelesen und die Rampe automatisch zugewiesen.','IHRE RAMPE','Fahren Sie direkt zu Rampe 12.','Kennzeichen','Spedition','Dokumentnummer','Einfahrtsschranke','Freigegeben (Demo)','Neuer Fahrer','Zurück','Dies ist eine Simulation. Keine echte Schranke wird geöffnet.','Weniger warten.|Mehr fahren.','Anmeldung direkt an der Einfahrt. Dokumente, Prüfung und Rampenzuweisung an einem Terminal.'],
+    pl:['Wybierz język','Dotknij flagi, aby kontynuować w swoim języku.','Przygotuj dokumenty.','Przygotuj CMR lub dokument dostawy. System odczyta dane i wskaże właściwą rampę.','CMR / dokument dostawy','Bez wizyty w biurze','Szybka odprawa','Mam przygotowane dokumenty','Zeskanuj dokument.','Umieść dokument w oznaczonym obszarze. Uruchom skanowanie demonstracyjne.','Rozpocznij skanowanie','Gotowe do skanowania','Wykrywanie dokumentu','Odczyt dokumentu (OCR)','Wyszukiwanie dostawy','Przydzielanie rampy','ODPRAWA ZAKOŃCZONA','Jedź do rampy.','Dokument został odczytany, a rampa przydzielona automatycznie.','TWOJA RAMPA','Jedź bezpośrednio do rampy nr 12.','Numer rejestracyjny','Przewoźnik','Numer dokumentu','Szlaban wjazdowy','Zezwolono (demo)','Nowy kierowca','Wstecz','To tylko symulacja. Żaden rzeczywisty szlaban się nie otworzy.','Mniej czekania.|Więcej jazdy.','Odprawa przy wjeździe. Dokumenty, weryfikacja i rampa w jednym miejscu.'],
+    sk:['Vyberte jazyk','Ťuknite na vlajku a pokračujte vo svojom jazyku.','Pripravte si dokumenty.','Pripravte si CMR alebo dodací list. Systém načíta údaje a nájde správnu rampu.','CMR / dodací list','Bez návštevy kancelárie','Rýchle odbavenie','Mám dokumenty pripravené','Naskenujte dokument.','Vložte dokument do označenej oblasti. Spustite ukážkové skenovanie.','Spustiť skenovanie','Pripravené na skenovanie','Rozpoznávanie dokumentu','Čítanie dokumentu (OCR)','Vyhľadávanie zásielky','Priraďovanie rampy','OD­BAVENIE DOKONČENÉ','Pokračujte na rampu.','Dokument bol načítaný a rampa automaticky pridelená.','VAŠA RAMPA','Choďte priamo na rampu číslo 12.','Evidenčné číslo','Dopravca','Číslo dokumentu','Vjazdová závora','Povolené (demo)','Nový vodič','Späť','Toto je simulácia. Žiadna skutočná závora sa neotvára.','Menej čakania.|Viac pohybu.','Odbavenie priamo pri vjazde. Dokumenty, kontrola a správna rampa na jednom mieste.'],
+    uk:['Оберіть мову','Натисніть на прапор, щоб продовжити своєю мовою.','Підготуйте документи.','Підготуйте CMR або накладну. Система зчитає дані та знайде потрібну рампу.','CMR / накладна','Без відвідування офісу','Швидка реєстрація','Документи готові','Відскануйте документ.','Розмістіть документ у позначеній зоні. Запустіть демонстраційне сканування.','Почати сканування','Готово до сканування','Виявлення документа','Зчитування документа (OCR)','Пошук вантажу','Призначення рампи','РЕЄСТРАЦІЮ ЗАВЕРШЕНО','Прямуйте до рампи.','Документ зчитано, рампу призначено автоматично.','ВАША РАМПА','Прямуйте безпосередньо до рампи № 12.','Номер автомобіля','Перевізник','Номер документа','В’їзний шлагбаум','Дозволено (демо)','Новий водій','Назад','Це симуляція. Справжній шлагбаум не відкривається.','Менше очікування.|Більше руху.','Реєстрація на в’їзді: документи, перевірка та призначення рампи в одному терміналі.'],
+    ro:['Alegeți limba','Atingeți un steag pentru a continua în limba dorită.','Pregătiți documentele.','Pregătiți CMR-ul sau avizul de livrare. Sistemul citește datele și găsește rampa corectă.','CMR / aviz de livrare','Fără vizită la birou','Înregistrare rapidă','Documentele sunt pregătite','Scanați documentul.','Așezați documentul în zona marcată și porniți scanarea demonstrativă.','Porniți scanarea','Pregătit pentru scanare','Detectarea documentului','Citirea documentului (OCR)','Căutarea transportului','Alocarea rampei','ÎNREGISTRARE FINALIZATĂ','Mergeți la rampă.','Documentul a fost citit, iar rampa a fost alocată automat.','RAMPA DVS.','Mergeți direct la rampa 12.','Număr de înmatriculare','Transportator','Număr document','Barieră de acces','Aprobat (demo)','Șofer nou','Înapoi','Aceasta este o simulare. Bariera reală nu se deschide.','Mai puțină așteptare.|Mai multă mișcare.','Înregistrare chiar la intrare: documente, verificare și rampă la un singur terminal.'],
+    hu:['Válasszon nyelvet','Érintse meg a zászlót, és folytassa a saját nyelvén.','Készítse elő az okmányokat.','Készítse elő a CMR-t vagy a szállítólevelet. A rendszer beolvassa az adatokat és kijelöli a megfelelő rámpát.','CMR / szállítólevél','Irodai ügyintézés nélkül','Gyors bejelentkezés','Az okmányok készen állnak','Olvassa be az okmányt.','Helyezze a dokumentumot a kijelölt területre, majd indítsa el a bemutató beolvasást.','Beolvasás indítása','Beolvasásra kész','Dokumentum felismerése','Dokumentum olvasása (OCR)','Szállítmány keresése','Rámpa kijelölése','BEJELENTKEZÉS KÉSZ','Menjen a rámpához.','A dokumentum beolvasása és a rámpa kijelölése megtörtént.','AZ ÖN RÁMPÁJA','Hajtson közvetlenül a 12-es rámpához.','Rendszám','Fuvarozó','Dokumentumszám','Belépési sorompó','Engedélyezve (demó)','Új sofőr','Vissza','Ez csak szimuláció. A valódi sorompó nem nyílik ki.','Kevesebb várakozás.|Több haladás.','Bejelentkezés a bejáratnál. Dokumentumok, ellenőrzés és rámpa egy terminálon.'],
+    bg:['Изберете език','Докоснете знаме, за да продължите на вашия език.','Подгответе документите.','Подгответе CMR или товарителница. Системата прочита данните и намира правилната рампа.','CMR / товарителница','Без посещение в офис','Бърза регистрация','Документите са готови','Сканирайте документа.','Поставете документа в маркираната зона и стартирайте демонстрационно сканиране.','Стартиране на сканиране','Готово за сканиране','Разпознаване на документа','Прочитане на документа (OCR)','Търсене на доставка','Назначаване на рампа','РЕГИСТРАЦИЯТА Е ГОТОВА','Продължете към рампата.','Документът е прочетен и рампата е назначена автоматично.','ВАШАТА РАМПА','Отидете директно на рампа 12.','Регистрационен номер','Превозвач','Номер на документа','Входна бариера','Разрешено (демо)','Нов шофьор','Назад','Това е симулация. Реална бариера не се отваря.','По-малко чакане.|Повече движение.','Регистрация на входа. Документи, проверка и рампа на един терминал.'],
+    hr:['Odaberite jezik','Dodirnite zastavu za nastavak na svom jeziku.','Pripremite dokumente.','Pripremite CMR ili otpremnicu. Sustav čita podatke i pronalazi odgovarajuću rampu.','CMR / otpremnica','Bez odlaska u ured','Brza prijava','Dokumenti su spremni','Skenirajte dokument.','Stavite dokument u označeno područje i pokrenite demonstracijsko skeniranje.','Pokreni skeniranje','Spremno za skeniranje','Prepoznavanje dokumenta','Čitanje dokumenta (OCR)','Traženje pošiljke','Dodjela rampe','PRIJAVA DOVRŠENA','Nastavite do rampe.','Dokument je očitan i rampa je automatski dodijeljena.','VAŠA RAMPA','Vozite izravno do rampe 12.','Registracijska oznaka','Prijevoznik','Broj dokumenta','Ulazna rampa','Odobreno (demo)','Novi vozač','Natrag','Ovo je simulacija. Stvarna rampa se ne otvara.','Manje čekanja.|Više kretanja.','Prijava na ulazu: dokumenti, provjera i rampa na jednom terminalu.'],
+    sl:['Izberite jezik','Dotaknite se zastave in nadaljujte v svojem jeziku.','Pripravite dokumente.','Pripravite CMR ali dobavnico. Sistem prebere podatke in poišče ustrezno rampo.','CMR / dobavnica','Brez obiska pisarne','Hitra prijava','Dokumenti so pripravljeni','Optično preberite dokument.','Dokument postavite v označeno območje in zaženite predstavitveno skeniranje.','Začni skeniranje','Pripravljeno za skeniranje','Prepoznavanje dokumenta','Branje dokumenta (OCR)','Iskanje pošiljke','Dodeljevanje rampe','PRIJAVA ZAKLJUČENA','Nadaljujte do rampe.','Dokument je prebran in rampa samodejno dodeljena.','VAŠA RAMPA','Peljite neposredno do rampe 12.','Registrska oznaka','Prevoznik','Številka dokumenta','Vhodna zapornica','Odobreno (demo)','Nov voznik','Nazaj','To je simulacija. Prava zapornica se ne odpre.','Manj čakanja.|Več vožnje.','Prijava na vhodu. Dokumenti, preverjanje in rampa na enem terminalu.'],
+    sr:['Изаберите језик','Додирните заставу да наставите на свом језику.','Припремите документа.','Припремите CMR или отпремницу. Систем чита податке и проналази одговарајућу рампу.','CMR / отпремница','Без одласка у канцеларију','Брза пријава','Документа су спремна','Скенирајте документ.','Ставите документ у означено подручје и покрените демонстрационо скенирање.','Покрени скенирање','Спремно за скенирање','Препознавање документа','Читање документа (OCR)','Претрага пошиљке','Додела рампе','ПРИЈАВА ЗАВРШЕНА','Наставите до рампе.','Документ је прочитан и рампа је аутоматски додељена.','ВАША РАМПА','Возите директно до рампе 12.','Регистарска ознака','Превозник','Број документа','Улазна рампа','Одобрено (демо)','Нови возач','Назад','Ово је симулација. Права рампа се не отвара.','Мање чекања.|Више вожње.','Пријава на улазу: документи, провера и рампа на једном терминалу.'],
+    it:['Seleziona la lingua','Tocca una bandiera per continuare nella tua lingua.','Prepara i documenti.','Prepara il CMR o la bolla di consegna. Il sistema legge i dati e trova la baia corretta.','CMR / bolla di consegna','Senza passare in ufficio','Check-in rapido','I documenti sono pronti','Scansiona il documento.','Posiziona il documento nell’area indicata e avvia la scansione dimostrativa.','Avvia scansione','Pronto per la scansione','Rilevamento documento','Lettura documento (OCR)','Ricerca spedizione','Assegnazione baia','CHECK-IN COMPLETATO','Vai alla baia.','Il documento è stato letto e la baia è stata assegnata automaticamente.','LA TUA BAIA','Vai direttamente alla baia 12.','Targa','Trasportatore','Numero documento','Sbarra di ingresso','Autorizzato (demo)','Nuovo autista','Indietro','Questa è una simulazione. Nessuna sbarra reale viene aperta.','Meno attesa.|Più movimento.','Check-in all’ingresso: documenti, controllo e baia in un unico terminale.'],
+    es:['Selecciona el idioma','Toca una bandera para continuar en tu idioma.','Prepara los documentos.','Prepara el CMR o el albarán. El sistema lee los datos y encuentra el muelle correcto.','CMR / albarán','Sin pasar por la oficina','Registro rápido','Ya tengo los documentos','Escanea el documento.','Coloca el documento en el área marcada e inicia el escaneo de demostración.','Iniciar escaneo','Listo para escanear','Detección del documento','Lectura del documento (OCR)','Búsqueda del envío','Asignación de muelle','REGISTRO COMPLETADO','Dirígete al muelle.','El documento se ha leído y el muelle se ha asignado automáticamente.','TU MUELLE','Ve directamente al muelle número 12.','Matrícula','Transportista','Número de documento','Barrera de entrada','Autorizado (demo)','Nuevo conductor','Atrás','Esto es una simulación. No se abre ninguna barrera real.','Menos espera.|Más movimiento.','Registro en la entrada: documentos, comprobación y muelle en un único terminal.'],
+    fr:['Choisissez la langue','Touchez un drapeau pour continuer dans votre langue.','Préparez vos documents.','Préparez votre CMR ou bon de livraison. Le système lit les données et trouve le bon quai.','CMR / bon de livraison','Sans passer au bureau','Enregistrement rapide','Mes documents sont prêts','Scannez le document.','Placez le document dans la zone indiquée, puis lancez le scan de démonstration.','Lancer le scan','Prêt à scanner','Détection du document','Lecture du document (OCR)','Recherche de livraison','Attribution du quai','ENREGISTREMENT TERMINÉ','Rendez-vous au quai.','Le document a été lu et le quai a été attribué automatiquement.','VOTRE QUAI','Allez directement au quai 12.','Immatriculation','Transporteur','Numéro du document','Barrière d’entrée','Autorisé (démo)','Nouveau chauffeur','Retour','Ceci est une simulation. Aucune barrière réelle ne s’ouvre.','Moins d’attente.|Plus de mouvement.','Enregistrement à l’entrée : documents, vérification et quai sur une seule borne.'],
+    nl:['Kies uw taal','Tik op een vlag om verder te gaan in uw taal.','Houd uw documenten klaar.','Houd uw CMR of leveringsbon klaar. Het systeem leest de gegevens en vindt het juiste dock.','CMR / leveringsbon','Niet naar het kantoor','Snel aanmelden','Documenten zijn klaar','Scan uw document.','Leg het document in het gemarkeerde gebied en start de demoscan.','Scan starten','Klaar om te scannen','Document herkennen','Document lezen (OCR)','Zending zoeken','Dock toewijzen','AANMELDING VOLTOOID','Rijd naar uw dock.','Uw document is gelezen en het dock is automatisch toegewezen.','UW DOCK','Rijd rechtstreeks naar dock 12.','Kenteken','Vervoerder','Documentnummer','Toegangsslagboom','Toegestaan (demo)','Nieuwe chauffeur','Terug','Dit is een simulatie. Er gaat geen echte slagboom open.','Minder wachten.|Meer rijden.','Aanmelden bij de ingang: documenten, controle en dock via één terminal.'],
+    lt:['Pasirinkite kalbą','Palieskite vėliavą ir tęskite savo kalba.','Paruoškite dokumentus.','Paruoškite CMR arba važtaraštį. Sistema nuskaitys duomenis ir parinks tinkamą rampą.','CMR / važtaraštis','Nereikia eiti į biurą','Greita registracija','Dokumentai paruošti','Nuskaitykite dokumentą.','Padėkite dokumentą pažymėtoje vietoje ir pradėkite demonstracinį nuskaitymą.','Pradėti nuskaitymą','Paruošta nuskaityti','Dokumento atpažinimas','Dokumento skaitymas (OCR)','Siuntos paieška','Rampos priskyrimas','REGISTRACIJA BAIGTA','Važiuokite prie rampos.','Dokumentas nuskaitytas, o rampa paskirta automatiškai.','JŪSŲ RAMPA','Važiuokite tiesiai prie 12 rampos.','Valstybinis numeris','Vežėjas','Dokumento numeris','Įvažiavimo užtvaras','Leista (demo)','Naujas vairuotojas','Atgal','Tai simuliacija. Tikras užtvaras neatsidaro.','Mažiau laukimo.|Daugiau judėjimo.','Registracija prie įvažiavimo: dokumentai, patikra ir rampa viename terminale.'],
+    lv:['Izvēlieties valodu','Pieskarieties karogam, lai turpinātu savā valodā.','Sagatavojiet dokumentus.','Sagatavojiet CMR vai pavadzīmi. Sistēma nolasīs datus un piešķirs pareizo rampu.','CMR / pavadzīme','Nav jāiet uz biroju','Ātra reģistrācija','Dokumenti ir gatavi','Skenējiet dokumentu.','Novietojiet dokumentu atzīmētajā zonā un sāciet demonstrācijas skenēšanu.','Sākt skenēšanu','Gatavs skenēšanai','Dokumenta atpazīšana','Dokumenta lasīšana (OCR)','Sūtījuma meklēšana','Rampas piešķiršana','REĢISTRĀCIJA PABEIGTA','Dodieties uz rampu.','Dokuments ir nolasīts un rampa automātiski piešķirta.','JŪSU RAMPA','Brauciet tieši uz rampu Nr. 12.','Reģistrācijas numurs','Pārvadātājs','Dokumenta numurs','Iebraukšanas barjera','Atļauts (demo)','Jauns vadītājs','Atpakaļ','Šī ir simulācija. Īsta barjera netiek atvērta.','Mazāk gaidīšanas.|Vairāk kustības.','Reģistrācija pie ieejas: dokumenti, pārbaude un rampa vienā terminālī.'],
+    et:['Valige keel','Puudutage lippu, et jätkata oma keeles.','Valmistage dokumendid ette.','Võtke valmis CMR või saateleht. Süsteem loeb andmed ja määrab õige laadimisplatvormi.','CMR / saateleht','Kontorit pole vaja','Kiire registreerimine','Dokumendid on valmis','Skannige dokument.','Asetage dokument märgitud alale ja alustage näidisskannimist.','Alusta skannimist','Skannimiseks valmis','Dokumendi tuvastamine','Dokumendi lugemine (OCR)','Saadetise otsimine','Platvormi määramine','REGISTREERIMINE LÕPETATUD','Sõitke platvormile.','Dokument on loetud ja platvorm automaatselt määratud.','TEIE PLATVORM','Sõitke otse platvormile 12.','Registreerimisnumber','Vedaja','Dokumendi number','Sissesõidutõkkepuu','Lubatud (demo)','Uus juht','Tagasi','See on simulatsioon. Tegelik tõkkepuu ei avane.','Vähem ootamist.|Rohkem liikumist.','Registreerimine sissepääsu juures: dokumendid, kontroll ja platvorm ühes terminalis.'],
+    tr:['Dil seçin','Kendi dilinizde devam etmek için bir bayrağa dokunun.','Belgelerinizi hazırlayın.','CMR veya irsaliyenizi hazırlayın. Sistem bilgileri okuyup doğru rampayı bulacaktır.','CMR / irsaliye','Ofise gitmeye gerek yok','Hızlı giriş işlemi','Belgelerim hazır','Belgeyi tarayın.','Belgeyi işaretli alana yerleştirin ve örnek taramayı başlatın.','Taramayı başlat','Taramaya hazır','Belge algılanıyor','Belge okunuyor (OCR)','Sevkiyat aranıyor','Rampa atanıyor','GİRİŞ İŞLEMİ TAMAMLANDI','Rampaya ilerleyin.','Belge okundu ve rampa otomatik olarak atandı.','RAMPANIZ','Doğrudan 12 numaralı rampaya gidin.','Plaka','Taşıyıcı','Belge numarası','Giriş bariyeri','Onaylandı (demo)','Yeni sürücü','Geri','Bu bir simülasyondur. Gerçek bariyer açılmaz.','Daha az bekleme.|Daha çok hareket.','Girişte kayıt: belgeler, kontrol ve rampa tek terminalde.']
+  };
+  const flagSvg={
+    CZ:'<rect width="39" height="13.5" fill="#fff"/><rect y="13.5" width="39" height="13.5" fill="#d7141a"/><path d="M0 0L19.5 13.5 0 27Z" fill="#11457e"/>',
+    GB:'<rect width="39" height="27" fill="#012169"/><path d="M0 0l39 27M39 0L0 27" stroke="#fff" stroke-width="7"/><path d="M0 0l39 27M39 0L0 27" stroke="#c8102e" stroke-width="3"/><path d="M19.5 0v27M0 13.5h39" stroke="#fff" stroke-width="10"/><path d="M19.5 0v27M0 13.5h39" stroke="#c8102e" stroke-width="5"/>',
+    DE:'<rect width="39" height="9" fill="#171717"/><rect y="9" width="39" height="9" fill="#d00a14"/><rect y="18" width="39" height="9" fill="#ffce00"/>',
+    PL:'<rect width="39" height="13.5" fill="#fff"/><rect y="13.5" width="39" height="13.5" fill="#dc143c"/>',
+    SK:'<rect width="39" height="9" fill="#fff"/><rect y="9" width="39" height="9" fill="#0b4ea2"/><rect y="18" width="39" height="9" fill="#ee1c25"/><path d="M11 7v13q6 6 12 0V7Z" fill="#ee1c25" stroke="#fff" stroke-width="1.5"/><path d="M17 9v11m-4-7h8m-7 4h6" stroke="#fff" stroke-width="2"/>',
+    UA:'<rect width="39" height="13.5" fill="#0057b7"/><rect y="13.5" width="39" height="13.5" fill="#ffd700"/>',
+    RO:'<rect width="13" height="27" fill="#002b7f"/><rect x="13" width="13" height="27" fill="#fcd116"/><rect x="26" width="13" height="27" fill="#ce1126"/>',
+    HU:'<rect width="39" height="9" fill="#cd2a3e"/><rect y="9" width="39" height="9" fill="#fff"/><rect y="18" width="39" height="9" fill="#436f4d"/>',
+    BG:'<rect width="39" height="9" fill="#fff"/><rect y="9" width="39" height="9" fill="#00966e"/><rect y="18" width="39" height="9" fill="#d62612"/>',
+    HR:'<rect width="39" height="9" fill="#ff0000"/><rect y="9" width="39" height="9" fill="#fff"/><rect y="18" width="39" height="9" fill="#171796"/><path d="M14 7h11v12q-5.5 6-11 0Z" fill="#fff" stroke="#b00" stroke-width="1"/><path d="M14 8h11v4H14Zm0 8h11v3H14Z" fill="#d00"/><path d="M17.5 8v11M21.5 8v11" stroke="#fff" stroke-width="2"/>',
+    SI:'<rect width="39" height="9" fill="#fff"/><rect y="9" width="39" height="9" fill="#005da4"/><rect y="18" width="39" height="9" fill="#ed1c24"/><path d="M8 5h12v10q-6 5-12 0Z" fill="#005da4" stroke="#fff" stroke-width="1"/><path d="M10 11l2-3 2 2 2-3 2 4" stroke="#fff" stroke-width="1.4" fill="none"/>',
+    RS:'<rect width="39" height="9" fill="#c6363c"/><rect y="9" width="39" height="9" fill="#0c4076"/><rect y="18" width="39" height="9" fill="#fff"/><path d="M11 7h9v11q-4.5 4-9 0Z" fill="#fff" stroke="#d2aa46"/><path d="M15.5 9v9m-3-5h6" stroke="#c6363c" stroke-width="1.7"/>',
+    IT:'<rect width="13" height="27" fill="#009246"/><rect x="13" width="13" height="27" fill="#fff"/><rect x="26" width="13" height="27" fill="#ce2b37"/>',
+    ES:'<rect width="39" height="7" fill="#aa151b"/><rect y="7" width="39" height="13" fill="#f1bf00"/><rect y="20" width="39" height="7" fill="#aa151b"/><rect x="12" y="10" width="5" height="8" rx="1" fill="#aa151b"/>',
+    FR:'<rect width="13" height="27" fill="#002395"/><rect x="13" width="13" height="27" fill="#fff"/><rect x="26" width="13" height="27" fill="#ed2939"/>',
+    NL:'<rect width="39" height="9" fill="#ae1c28"/><rect y="9" width="39" height="9" fill="#fff"/><rect y="18" width="39" height="9" fill="#21468b"/>',
+    LT:'<rect width="39" height="9" fill="#fdb913"/><rect y="9" width="39" height="9" fill="#006a44"/><rect y="18" width="39" height="9" fill="#c1272d"/>',
+    LV:'<rect width="39" height="11" fill="#9e1b34"/><rect y="11" width="39" height="5" fill="#fff"/><rect y="16" width="39" height="11" fill="#9e1b34"/>',
+    EE:'<rect width="39" height="9" fill="#4891d9"/><rect y="9" width="39" height="9" fill="#111"/><rect y="18" width="39" height="9" fill="#fff"/>',
+    TR:'<rect width="39" height="27" fill="#e30a17"/><circle cx="16" cy="13.5" r="8" fill="#fff"/><circle cx="19" cy="12" r="6.5" fill="#e30a17"/><path d="m28 8 1.5 4 4 .1-3.2 2.6 1.1 4-3.4-2.2-3.4 2.2 1.1-4-3.2-2.6 4-.1Z" fill="#fff" transform="translate(-2 0) scale(.89)"/>'
+  };
+
+const $=id=>document.getElementById(id);
+let language='cs',processing=false,activeTimer=null,stageTimers=[];
+const copy=index=>(localeStrings[language]||localeStrings.cs)[index]||localeStrings.cs[index];
+function translate(){
+  for(const [id,index] of Object.entries({prepareTitle:2,readyButton:7,scanTitle:8,scanButton:10,resultTitle:17,dockLabel:19,plateLabel:21,documentLabel:23,restartButton:26}))$(id).textContent=copy(index);
+}
+function show(id){
+  for(const el of document.querySelectorAll('.page'))el.classList.toggle('active',el.id===id);
+  $(id).setAttribute('tabindex','-1');$(id).focus({preventScroll:true});window.scrollTo(0,0);
+}
+function resetScan(){
+  if(activeTimer!==null)clearTimeout(activeTimer);
+  stageTimers.forEach(clearTimeout);stageTimers=[];activeTimer=null;processing=false;
+  $('scanner').classList.remove('working');$('scanButton').disabled=false;$('scanStatus').textContent='';
+}
+function scan(){
+  if(processing)return;processing=true;$('scanButton').disabled=true;
+  $('scanner').classList.add('working');
+  const times=[0,850,1700,2550];
+  times.forEach((time,i)=>stageTimers.push(setTimeout(()=>$('scanStatus').textContent=copy(12+i),time)));
+  activeTimer=setTimeout(()=>{resetScan();show('resultPage')},3600);
+}
+for(const [code,country,name] of languages){
+  const b=document.createElement('button');b.type='button';b.className='lang';b.lang=code;b.setAttribute('aria-label',name);
+  b.innerHTML=`<span class="flag" aria-hidden="true"><svg viewBox="0 0 39 27" preserveAspectRatio="none" xmlns="http://www.w3.org/2000/svg">${flagSvg[country]}</svg></span><span></span>`;
+  b.lastElementChild.textContent=name;
+  b.addEventListener('click',()=>{language=code;document.documentElement.lang=code;translate();show('preparePage')});
+  $('languageGrid').appendChild(b);
+}
+$('readyButton').addEventListener('click',()=>{resetScan();show('scanPage')});
+$('scanButton').addEventListener('click',scan);
+$('restartButton').addEventListener('click',()=>{resetScan();language='cs';document.documentElement.lang='cs';translate();show('languagePage')});
+translate();
+})();
+</script>
+</body>
+</html>
